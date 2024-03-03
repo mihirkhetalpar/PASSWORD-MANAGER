@@ -1,0 +1,198 @@
+body {
+    font-family: 'lemon';
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f5f5f5;
+  }
+
+  #PassManager{
+    position: absolute;
+    top: 0px;
+    padding: 0;
+    margin: 0;
+    font-size: 5rem;
+    text-align: center;
+    text-decoration: none;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    background: linear-gradient(55deg, #0400ff 0.72%, #ff0000 101.6%);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  #Form-container {
+    position: relative;
+    text-align: center;
+    background-color: #ffffff;
+    left: -20px;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+  }
+  
+  #form-toggle {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+  }
+  
+  #form-toggle span {
+    cursor: pointer;
+    padding: 10px;
+    border-bottom: 2px solid transparent;
+  }
+  
+  #form-toggle span:hover {
+    border-bottom: 2px solid #4caf50;
+  }
+  
+  #form-toggle .active {
+    border-bottom: 2px solid #4caf50;
+  }
+  
+  #login-form,
+  #signup-form,
+  #google-signin {
+    display: none;
+  }
+  
+  #login-form.active,
+  #signup-form.active,
+  #google-signin.active {
+    display: block;
+  }
+  
+  label {
+    position: relative;
+    display: block;
+    margin-top: 10px;
+    left: -10px;
+  }
+  
+  input {
+    position: relative;
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    left: -10px;
+    font-family: 'lemon';
+  }
+
+  .password-container {
+    position: relative;
+  }
+  
+  .password-toggle {
+    position: absolute;
+    width: 60px;
+    top: 13px;
+    right: 0px;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    padding: 0px;
+  }
+
+  .input-with-copy {
+    position: relative;
+  }
+  
+  .copy-button {
+    position: absolute;
+    width: 70px;
+    height: 40px;
+    font-size: 1.2rem;
+    text-align: center;
+    top: 3px;
+    padding: 0px;
+    right: -90px;
+    border: none;
+    cursor: pointer;
+  }
+  
+  
+  button {
+    width: 100%;
+    padding: 10px;
+    background-color: #00dfff;
+    color: black;
+    border: none;
+    border-radius: 5px;
+    font-family: 'Lemon';
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #ff0095;
+  }
+
+  #entry-note{
+    font-family: 'lemon';
+    padding: 10px;
+    border-radius: 10px;
+    height: 8vh;
+    width: -webkit-fill-available;
+    resize: none;
+  }
+
+  aside{
+    position: absolute;
+    background-color: rgb(0, 0, 0);
+    height: 100vh;
+    width: 15%;
+    left: 0px;
+    border-radius: 0px 20px 20px 0px;
+  }
+
+  #SideBar h1{
+    position: relative;
+    text-align: center;
+    font-size: 3rem;
+    margin: 0px;
+    background-color: rgb(0, 0, 0);
+    color: rgb(255, 255, 255);
+    border-top-right-radius: 20px;
+  }
+
+  #password-list{
+    display: flex;
+    position: relative;
+    list-style: none;
+    text-align: center;
+    padding: 10px;
+    margin: 0px;
+    gap: 10px;
+    cursor: pointer;
+    flex-direction: column;
+    font-size: 1.5rem;
+  }
+
+  #password-list li{
+    width: 100%;
+    color: aqua;
+    background-color: #333333;
+  }
+
+  #add-entry-form h1{
+    width: 100%;
+    text-align: center;
+    font-size: 3rem;
+    margin: 0;
+  }
+
+  #SaveEntryBTN{
+   margin-bottom: 10px;
+  }
+
+  #CancelBTN{
+    margin-bottom: 10px;
+  }

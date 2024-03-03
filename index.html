@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <script defer src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.6.7/firebase-database-compat.js"></script>  
+  <link href='https://fonts.googleapis.com/css?family=Lemon' rel='stylesheet'>
+  <link rel="shortcut icon" href="IMG/PM-Logo.png" type="image/x-icon">
+  <title>password Manager</title>
+  <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+
+  <h1 id="PassManager">PASSWORD MANAGER</h1>
+
+  <div id="Form-container">
+    <h1>Password Manager</h1>
+
+    <div id="form-toggle">
+      <span id="login-toggle" class="active" onclick="toggleForm('login')">Login</span>
+      <span id="signup-toggle" onclick="toggleForm('signup')">Sign Up</span>
+    </div>
+
+    <!-- Email/Password Login Form -->
+    <div id="login-form" class="active">
+      <h2>Login</h2>
+      <label for="login-email">Email:</label>
+      <input type="email" id="login-email" name="login-email" required>
+      <button onclick="forgotPassword()">Forgot Password</button>      
+
+      <label for="login-password">Password:</label>
+      <input type="password" id="login-password" name="login-password" required>
+
+      <button onclick="loginWithEmailPassword()">Login</button>
+    </div>
+
+    <!-- Email/Password Sign Up Form -->
+    <div id="signup-form">
+      <h2>Sign Up</h2>
+      <label for="signup-email">Email:</label>
+      <input type="email" id="signup-email" name="signup-email" required>
+
+      <label for="signup-password">Password:</label>
+      <input type="password" id="signup-password" name="signup-password" required>
+
+      <button onclick="signupWithEmailPassword()">Sign Up</button>
+
+      <!-- Google Sign-In Button -->
+      <div id="google-signin" style="display: none;">
+        <h2>Sign In with Google</h2>
+        <button onclick="loginWithGoogle()">Sign In with Google</button>
+      </div>
+    </div>
+  </div>
+
+  <aside id="sidebar" style="display: none;">
+    <div id="SideBar">
+      <h1>ENTRIES</h1>
+      <ul id="password-list"></ul>
+      <button onclick="showAddEntryForm()">Add Entry</button>
+    </div>
+  </aside>  
+
+  <div id="add-entry-form" style="display: none;">
+    <h1>Add Entry</h1>
+    <label for="entry-name">Name:</label>
+    <input type="text" id="entry-name" name="entry-name" required>
+  
+    <label for="entry-url">URL:</label>
+    <div class="input-with-copy">
+      <input type="text" id="entry-url" name="entry-url" required>
+      <button class="copy-button" onclick="copyToClipboard('entry-url')">Copy</button>
+    </div>
+    
+    <label for="entry-username">Username:</label>
+    <div class="input-with-copy">
+      <input type="text" id="entry-username" name="entry-username" required>
+      <button class="copy-button" onclick="copyToClipboard('entry-username')">Copy</button>
+    </div>
+    
+    <label for="entry-password">Password:</label>
+    <div class="password-container">
+      <input type="password" id="entry-password" name="entry-password" required>
+      <button class="password-toggle" onclick="togglePasswordVisibility()">Show</button>
+      <button class="copy-button" onclick="copyToClipboard('entry-password')">Copy</button>
+    </div>
+  
+    <label for="entry-note">Note:</label>
+    <textarea id="entry-note" name="entry-note"></textarea>
+  
+    <button id="SaveEntryBTN" onclick="saveEntry()">Save Entry</button>
+    <button id="CancelBTN" onclick="cancelAddEntry()">Cancel</button>
+    <button id="delete-entry-button" style="display: none;" onclick="deleteSelectedEntry()">Delete Entry</button>
+  </div>
+
+  <!-- Add type="module" to indicate ESM -->
+<script type="module" defer>
+
+// Use this version in your import statements
+import { ref, push, onValue, getDatabase, remove } from 'https://www.gstatic.com/firebasejs/9.6.7/firebase-database.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/9.6.7/firebase-auth.js';
+
+ // Function to validate email format
+ function isValidEmail(email) {
+  // Regular expression for basic email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCmXrX7iI9NRnSmKsZClVpCSwywlMClfcQ",
+    authDomain: "password-manager-by-mihir.firebaseapp.com",
+    databaseURL: "https://password-manager-by-mihir-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "password-manager-by-mihir",
+    storageBucket: "password-manager-by-mihir.appspot.com",
+    messagingSenderId: "937895494779",
+    appId: "1:937895494779:web:d4180a5f3e1c9e38d08ede",
+    measurementId: "G-ECK7Q95MMF"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig, { databaseURL: 'https://your-database-url.firebaseio.com', persistence: true });
+  const auth = getAuth(app);
+  const database = getDatabase(app);
+
+  let email; // Declare email globally
+  let user; // Declare user globally
+
+   // Retrieve the delete button element
+   const deleteEntryButton = document.getElementById('delete-entry-button');
+
+     // Function to show the "Add Entry" form
+     function showAddEntryForm() {
+      document.getElementById('add-entry-form').style.display = 'block';
+    }
+
+
+// Function to log in with email and password
+async function loginWithEmailPassword() {
+  const emailInput = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
+
+  const email = emailInput ? emailInput.value.trim() : '';
+  const password = passwordInput ? passwordInput.value : '';
+
+  if (!email || !password) {
+    console.error('Email and password are required');
+    return;
+  }
+
+  if (!isValidEmail(email)) {
+    console.error('Invalid email format');
+    return;
+  }
+
+  // Check if the user is online
+  if (navigator.onLine) {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log('Logged in:', user.email);
+      displayStoredPasswords();
+    } catch (error) {
+      console.error('Login error:', error.code, error.message, error);
+      alert(`Login failed. Error code: ${error.code}. Error message: ${error.message}`);
+    }
+  } else {
+    console.log('User is offline. Checking for locally stored data.');
+    displayStoredPasswordsOffline(); // Use locally stored data when offline
+  }
+}
+
+ // Function to sign up with email and password
+function signupWithEmailPassword() {
+  const emailInput = document.getElementById('signup-email');
+  const passwordInput = document.getElementById('signup-password');
+
+  // Get email and password values
+  const email = emailInput ? emailInput.value : '';
+  const password = passwordInput ? passwordInput.value : '';
+
+  // Client-side email validation
+  if (!isValidEmail(email)) {
+    console.error('Invalid email format');
+    // Optionally, you can display an error message to the user
+    return;
+  }
+
+  // Sign up with email and password
+  createUserWithEmailAndPassword(auth, email, password)
+    .then((userCredential) => {
+      // Successful sign up
+      const user = userCredential.user;
+      console.log('Signed up:', user.email);
+
+      // Display a success message or redirect to the login form
+      alert('Sign up successful! You can now log in.');
+      // Alternatively, redirect to the login form
+      // window.location.href = 'login.html';
+
+      // Optionally, you can hide the sign-up form or perform other actions
+      document.getElementById('signup-form').style.display = 'none';
+    })
+    .catch((error) => {
+      // Handle sign up error
+      console.error('Sign up error:', error.code, error.message);
+      // Optionally, you can display an error message to the user
+    });
+}
+
+// Function to log in with Google
+function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+
+  signInWithPopup(auth, provider)
+    .then((result) => {
+      // Successful Google login
+      const user = result.user;
+      console.log('Logged in with Google:', user.displayName);
+      // Redirect or perform actions after successful login
+
+      // Reload the page and hide the form
+      location.reload();
+      document.getElementById('signup-form').style.display = 'none';
+    })
+    .catch((error) => {
+      // Handle Google login error
+      console.error('Google login error:', error.message);
+    });
+}
+
+// Function to handle the "Forgot Password" action
+function forgotPassword() {
+  const email = document.getElementById('login-email').value;
+
+  if (!isValidEmail(email)) {
+    console.error('Invalid email format');
+    // Optionally, you can display an error message to the user
+    return;
+  }
+
+  // Use sendPasswordResetEmail from the 'auth' object
+  sendPasswordResetEmail(auth, email)
+    .then(() => {
+      alert('Password reset email sent successfully');
+      // Optionally, you can inform the user that a password reset email has been sent
+    })
+    .catch((error) => {
+      console.error('Password reset error:', error.code, error.message);
+      alert('Password reset failed. Please check your email and try again.');
+      // Optionally, you can inform the user that the password reset failed
+    });
+}
+
+ // Function to display stored passwords in the sidebar
+function displayStoredPasswords() {
+  const user = auth.currentUser;
+  const passwordList = document.getElementById('password-list');
+
+  if (user) {
+    const storedData = retrieveDataLocally(user.uid);
+
+    if (storedData) {
+      updatePasswordList(passwordList, storedData);
+    }
+
+    const userPasswordsRef = ref(database, `users/${user.uid}/passwords`);
+
+    onValue(userPasswordsRef, (snapshot) => {
+      const data = snapshot.val();
+
+      if (data) {
+        passwordList.innerHTML = '';
+        updatePasswordList(passwordList, data);
+        storeDataLocally(user.uid, data);
+      } else {
+        console.log('No entries found.');
+      }
+    }, (error) => {
+      console.error('Error fetching entries:', error);
+    });
+  }
+}
+
+// Function to display stored passwords in the sidebar when offline
+function displayStoredPasswordsOffline() {
+  const user = auth.currentUser;
+  const passwordList = document.getElementById('password-list');
+  const formContainer = document.getElementById('Form-container');
+  const sidebar = document.getElementById('sidebar');
+
+  if (user) {
+    const storedData = retrieveDataLocally(user.uid);
+
+    if (storedData) {
+      formContainer.style.display = 'none'; // Hide the login form
+      sidebar.style.display = 'block'; // Show the sidebar
+      passwordList.innerHTML = ''; // Clear the passwordList before updating
+      updatePasswordList(passwordList, storedData);
+    } else {
+      console.log('No locally stored entries found.');
+    }
+  } else {
+    console.log('User not logged in.');
+    // Fetch and display passwords from local storage even if the user is offline
+    const locallyStoredData = retrieveDataLocally('offline');
+    if (locallyStoredData) {
+      formContainer.style.display = 'none'; // Hide the login form
+      sidebar.style.display = 'block'; // Show the sidebar
+      passwordList.innerHTML = ''; // Clear the passwordList before updating
+      updatePasswordList(passwordList, locallyStoredData);
+    }
+  }
+}
+
+// Function to store data locally
+function storeDataLocally(userId, data) {
+  const localStorageKey = `passwordManagerData_${userId}`;
+  localStorage.setItem(localStorageKey, JSON.stringify(data));
+}
+
+// Function to retrieve data locally
+function retrieveDataLocally(userId) {
+  const localStorageKey = `passwordManagerData_${userId}`;
+  const storedData = localStorage.getItem(localStorageKey);
+  return storedData ? JSON.parse(storedData) : null;
+}
+
+// Function to display a single entry
+function displayEntry(userId, entryKey) {
+  const entryRef = ref(database, `users/${userId}/passwords/${entryKey}`);
+
+  // Listen for changes in the specific entry
+  onValue(entryRef, (snapshot) => {
+    const entryData = snapshot.val();
+
+    // Update the UI with the entry details
+    document.getElementById('entry-name').value = entryData.name;
+    document.getElementById('entry-url').value = entryData.url;
+    document.getElementById('entry-username').value = entryData.username;
+    document.getElementById('entry-password').value = entryData.password;
+    document.getElementById('entry-note').value = entryData.note;
+
+    // Show the add-entry-form
+    showAddEntryForm();
+  });
+}
+
+// Function to delete the selected entry
+function deleteSelectedEntry() {
+  console.log('deleteSelectedEntry called'); // Add this line
+
+  const user = auth.currentUser;
+  const selectedEntryKey = getCurrentSelectedEntryKey();
+
+  if (!user || !selectedEntryKey) {
+    console.error('User not logged in or entry not selected');
+    return;
+  }
+
+  // Log the user and entry key for debugging
+  console.log('User:', user);
+  console.log('Selected Entry Key:', selectedEntryKey);
+
+  // Call the deleteEntry function with the necessary arguments
+  deleteEntry(user.uid, selectedEntryKey);
+}
+
+
+let currentSelectedEntryKey = null;
+
+function getCurrentSelectedEntryKey() {
+  return currentSelectedEntryKey;
+}
+
+function setCurrentSelectedEntryKey(entryKey) {
+  currentSelectedEntryKey = entryKey;
+}
+
+// Function to delete an entry from the database
+function deleteEntry(userId, entryKey) {
+  console.log('Delete Entry Function Called');
+  console.log('User ID:', userId);
+  console.log('Entry Key:', entryKey);
+
+  const entryRef = ref(database, `users/${userId}/passwords/${entryKey}`);
+  console.log('Entry Reference:', entryRef);
+
+  // Remove the entry from the database
+  remove(entryRef)
+    .then(() => {
+      console.log('Entry deleted successfully');
+      
+      // Update the displayed entries after successful deletion
+      displayStoredPasswords();
+
+      // Optionally, clear the form and hide it if needed
+      document.getElementById('entry-name').value = '';
+      document.getElementById('entry-url').value = '';
+      document.getElementById('entry-username').value = '';
+      document.getElementById('entry-password').value = '';
+      document.getElementById('entry-note').value = '';
+      document.getElementById('add-entry-form').style.display = 'none';
+    })
+    .catch((error) => {
+      console.error('Error deleting entry:', error);
+      // Optionally, you can provide user feedback or handle the error
+    });
+}
+
+// Function to check if the user is online
+function isOnline() {
+  return navigator.onLine;
+}
+
+// Function to update the password list in the UI
+function updatePasswordList(passwordList, data) {
+  const user = auth.currentUser;  // Capture the user variable
+
+  Object.entries(data).forEach(([entryKey, passwordData]) => {
+    const passwordName = passwordData.name;
+
+    const listItem = document.createElement('li');
+    listItem.textContent = passwordName;
+
+    listItem.addEventListener('click', () => {
+      displayEntry(user.uid, entryKey);
+      setCurrentSelectedEntryKey(entryKey);
+      deleteEntryButton.style.display = 'block';
+    });
+
+    passwordList.appendChild(listItem);
+  });
+
+  console.log('Entries displayed successfully.');
+}
+
+// Call the function after a successful login
+auth.onAuthStateChanged((user) => {
+  console.log('onAuthStateChanged called:', user);
+
+  if (user) {
+    // User is logged in
+    if (isOnline()) {
+      // User is online, attempt to sync and display stored passwords
+      syncAndDisplayStoredPasswords();
+      document.getElementById('Form-container').style.display = 'none';
+      document.getElementById('sidebar').style.display = 'block';
+    } else {
+      // User is offline, display stored passwords from local storage
+      document.getElementById('Form-container').style.display = 'none';
+      document.getElementById('sidebar').style.display = 'block';
+      displayStoredPasswordsOffline();
+    }
+  } else {
+    // User is not logged in
+    if (isOnline()) {
+      // User is online, show the login form
+      document.getElementById('Form-container').style.display = 'block';
+      document.getElementById('sidebar').style.display = 'none';
+    } else {
+      // User is offline, show the login form and display stored passwords from local storage
+      document.getElementById('Form-container').style.display = 'block';
+      document.getElementById('sidebar').style.display = 'none';
+      displayStoredPasswordsOffline();
+    }
+  }
+});
+
+// Listen for changes in online status
+window.addEventListener('online', () => {
+  console.log('Online event detected');
+  const user = auth.currentUser;
+
+  if (user) {
+    // User is logged in and online
+    document.getElementById('Form-container').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'block';
+
+    // Attempt to sync and display stored passwords when connected
+    syncAndDisplayStoredPasswords();
+  } else {
+    // User is not logged in, keep the login form visible
+    document.getElementById('Form-container').style.display = 'block';
+    document.getElementById('sidebar').style.display = 'none';
+  }
+});
+
+function syncAndDisplayStoredPasswords() {
+  const user = auth.currentUser;
+  const passwordList = document.getElementById('password-list');
+
+  if (user) {
+    const userPasswordsRef = ref(database, `users/${user.uid}/passwords`);
+
+    onValue(userPasswordsRef, (snapshot) => {
+      const data = snapshot.val();
+
+      if (data) {
+        passwordList.innerHTML = '';
+        updatePasswordList(passwordList, data);
+        storeDataLocally(user.uid, data);
+      } else {
+        console.log('No entries found.');
+      }
+    }, (error) => {
+      console.error('Error fetching entries:', error);
+    });
+  }
+}
+
+window.addEventListener('offline', () => {
+  console.log('Offline event detected');
+  const user = auth.currentUser;
+
+  if (user) {
+    // User is logged in but offline, display stored passwords from local storage
+    document.getElementById('Form-container').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'block';
+    displayStoredPasswordsOffline();
+  } else {
+    // User is not logged in and offline, show the login form
+    document.getElementById('Form-container').style.display = 'block';
+    document.getElementById('sidebar').style.display = 'none';
+    displayStoredPasswordsOffline();
+  }
+});
+
+// Function to watch for changes in online status
+window.addEventListener('online', () => {
+  console.log('Online event detected');
+  if (auth.currentUser) {
+    document.getElementById('Form-container').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'block';
+    displayStoredPasswords(); // Fetch and display passwords when connected
+  }
+});
+
+window.addEventListener('offline', () => {
+  console.log('Offline event detected');
+  document.getElementById('Form-container').style.display = 'block';
+  document.getElementById('sidebar').style.display = 'none';
+});
+
+// Function to cancel adding an entry
+function cancelAddEntry() {
+  document.getElementById('add-entry-form').style.display = 'none';
+}
+
+
+// Function to save an entry to the database
+function saveEntry() {
+  const user = auth.currentUser;
+  const entryName = document.getElementById('entry-name').value;
+  const entryUrl = document.getElementById('entry-url').value;
+  const entryUsername = document.getElementById('entry-username').value;
+  const entryPassword = document.getElementById('entry-password').value;
+  const entryNote = document.getElementById('entry-note').value;
+
+  // Validate inputs
+  if (!entryName || !entryUrl || !entryUsername || !entryPassword) {
+    console.error('All fields are required');
+    return;
+  }
+
+  // Reference to the user's passwords in the database
+  const userPasswordsRef = ref(database, `users/${user.uid}/passwords`);
+
+   // Push a new entry to the database
+   push(userPasswordsRef, {
+    name: entryName,
+    url: entryUrl,
+    username: entryUsername,
+    password: entryPassword,
+    note: entryNote
+  })
+  .then(() => {
+    // Clear the form
+    document.getElementById('entry-name').value = '';
+    document.getElementById('entry-url').value = '';
+    document.getElementById('entry-username').value = '';
+    document.getElementById('entry-password').value = '';
+    document.getElementById('entry-note').value = '';
+
+    // Hide the form
+    document.getElementById('add-entry-form').style.display = 'none';
+
+    // Update the displayed entries
+    displayStoredPasswords();
+
+    // Store the data locally, including the 'offline' key
+    storeDataLocally('offline', data);
+  })
+  .catch((error) => {
+    console.error('Error saving entry:', error);
+    // Optionally, you can provide user feedback or handle the error
+  });
+}
+
+// Expose the functions globally
+window.loginWithEmailPassword = loginWithEmailPassword;
+window.showAddEntryForm = showAddEntryForm;
+window.signupWithEmailPassword = signupWithEmailPassword;
+window.loginWithGoogle = loginWithGoogle;
+window.showAddEntryForm = showAddEntryForm;
+window.cancelAddEntry = cancelAddEntry;
+window.saveEntry = saveEntry;
+window.forgotPassword = forgotPassword;
+window.deleteEntry = deleteEntry;
+window.deleteSelectedEntry = deleteSelectedEntry;
+</script>
+
+
+  <script src="script.js"></script>
+</body>
+</html>
